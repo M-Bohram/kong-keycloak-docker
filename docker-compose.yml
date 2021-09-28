@@ -1,0 +1,73 @@
+version: "3.7"
+
+volumes:
+  postgres_data:
+    driver: local
+
+services:
+  postgres:
+    image: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+  #  mysql:
+  #    image: mysql:5.7
+  #    volumes:
+  #      - mysql_data:/var/lib/mysql
+  #    environment:
+  #      MYSQL_ROOT_PASSWORD: root
+  #      MYSQL_DATABASE: keycloak
+  #      MYSQL_USER: keycloak
+  #      MYSQL_PASSWORD: password
+  #  mariadb:
+  #      image: mariadb
+  #      volumes:
+  #        - mysql_data:/var/lib/mysql
+  #      environment:
+  #        MYSQL_ROOT_PASSWORD: root
+  #        MYSQL_DATABASE: keycloak
+  #        MYSQL_USER: keycloak
+  #        MYSQL_PASSWORD: password
+  # Copy-pasted from https://github.com/docker-library/mariadb/issues/94
+  #      healthcheck:
+  #        test: ["CMD", "mysqladmin", "ping", "--silent"]
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    environment:
+      DB_VENDOR: POSTGRES
+      DB_ADDR: postgres
+      DB_DATABASE: keycloak
+      DB_USER: keycloak
+      DB_SCHEMA: public
+      DB_PASSWORD: password
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: Pa55w0rd
+      # Uncomment the line below if you want to specify JDBC parameters. The parameter below is just an example, and it shouldn't be used in production without knowledge. It is highly recommended that you read the PostgreSQL JDBC driver documentation in order to use it.
+      #JDBC_PARAMS: "ssl=true"
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres
+  #        - mysql
+  #        - mariadb
+  kong:
+    image: kong:2.5.1
+    network_mode: "host"
+    volumes:
+      - ./kong.yml:/usr/local/kong/declarative/kong.yml
+    environment:
+      - KONG_DATABASE=off
+      - KONG_DECLARATIVE_CONFIG=/usr/local/kong/declarative/kong.yml
+      - KONG_PROXY_ACCESS_LOG=/dev/stdout
+      - KONG_ADMIN_ACCESS_LOG=/dev/stdout
+      - KONG_PROXY_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001, 0.0.0.0:8444 ssl
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+      - "127.0.0.1:8001:8001"
+      - "127.0.0.1:8444:8444"
